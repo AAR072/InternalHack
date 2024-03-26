@@ -112,8 +112,9 @@ DWORD WINAPI HackThread(HMODULE hModule) {
     AllocConsole();
     FILE * f;
     freopen_s(&f, "CONOUT$", "w", stdout);
-
+    SetConsoleTitle(TEXT("Lifty Client"));
     std::cout << "STARTED CLIENT\n";
+    bool stateChanged = true;
 
     // get mod base
     uintptr_t moduleBase = (uintptr_t)GetModuleHandle(L"ac_client.exe");
@@ -136,19 +137,20 @@ DWORD WINAPI HackThread(HMODULE hModule) {
     // hack loop
     while (true)
     {
-        if (GetAsyncKeyState(VK_END) & 1) {
+
+        if (GetAsyncKeyState(VK_ESCAPE) & 1) {
             break;
         }
 
         if (GetAsyncKeyState(VK_NUMPAD1) & 1) {
             bHealth = !bHealth;
-            std::cout << "Health Toggle\n";
+            stateChanged = true;
 
         }
 
         if (GetAsyncKeyState(VK_NUMPAD2) & 1) {
             bAmmo = !bAmmo;
-            std::cout << "Ammo Toggle\n";
+            stateChanged = true;
             if (bAmmo) {
                 mem::Nop((BYTE*)(moduleBase + 0x0C73EF), 2);
             }
@@ -161,22 +163,29 @@ DWORD WINAPI HackThread(HMODULE hModule) {
 
         if (GetAsyncKeyState(VK_NUMPAD3) & 1) {
             bRecoil = !bRecoil;
-            if (bRecoil)
+            stateChanged = true;
+            if (bRecoil) 
             {
-                
-            }
-            else
-            {
-                // write back og instructions
+                mem::Patch((BYTE*)(moduleBase + 0xC8BA0), (BYTE*)"\xC2\x08\x00", 3);
             }
         }
-
-        Sleep(5);
         if (bHealth)
         {
             localPlayer->Health = 133;
 
         }
+        if (stateChanged) {
+            clear_screen();
+            std::cout << "Health Toggle: " << (bHealth ? "On" : "Off") << "\n";
+            std::cout << "Ammo Toggle: " << (bAmmo ? "On" : "Off") << "\n";
+            std::cout << "Recoil Toggle: " << (bRecoil ? "On" : "Off") << "\n";
+            std::cout << "Current Health: " << localPlayer->Health << "\n";
+            stateChanged = false; // Reset state change flag
+        }
+        Sleep(5);
+ 
+        
+        
     }
     fclose(f);
     FreeConsole();
